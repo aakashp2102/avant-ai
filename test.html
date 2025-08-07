@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CopilotX Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007CFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 CopilotX Test Page</h1>
+        <p>This page helps you test CopilotX functionality. Make sure the CopilotX extension is loaded in Chrome.</p>
+        
+        <div class="form-group">
+            <label>Test Goal:</label>
+            <input type="text" id="goalInput" placeholder="e.g., Extract all headings from this page" value="Extract all headings from this page">
+            <button onclick="testCreatePlan()">Create Plan</button>
+        </div>
+
+        <div class="form-group">
+            <label>Test Browser Tool:</label>
+            <select id="toolSelect">
+                <option value="browser_scrape">Scrape Elements</option>
+                <option value="browser_click">Click Element</option>
+                <option value="browser_type">Type Text</option>
+            </select>
+            <input type="text" id="toolArgs" placeholder="e.g., selector: h1, h2, h3" value="selector: h1, h2, h3">
+            <button onclick="testTool()">Execute Tool</button>
+        </div>
+
+        <div class="form-group">
+            <label>Get Available Tools:</label>
+            <button onclick="getTools()">List Tools</button>
+        </div>
+
+        <div class="form-group">
+            <label>Get Memory:</label>
+            <button onclick="getMemory()">Export Memory</button>
+        </div>
+
+        <div class="form-group">
+            <label>Results:</label>
+            <div id="results" class="result">Click a button above to see results...</div>
+        </div>
+    </div>
+
+    <script>
+        function logResult(data) {
+            document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+        }
+
+        function testCreatePlan() {
+            const goal = document.getElementById('goalInput').value;
+            chrome.runtime.sendMessage({
+                type: 'CREATE_PLAN',
+                goal: goal
+            }, response => {
+                console.log('Plan created:', response);
+                logResult(response);
+            });
+        }
+
+        function testTool() {
+            const toolName = document.getElementById('toolSelect').value;
+            const argsText = document.getElementById('toolArgs').value;
+            
+            // Parse arguments (simple key:value format)
+            const args = {};
+            argsText.split(',').forEach(pair => {
+                const [key, value] = pair.split(':').map(s => s.trim());
+                if (key && value) {
+                    args[key] = value;
+                }
+            });
+
+            chrome.runtime.sendMessage({
+                type: 'EXECUTE_TOOL',
+                toolCall: {
+                    name: toolName,
+                    arguments: args
+                }
+            }, response => {
+                console.log('Tool executed:', response);
+                logResult(response);
+            });
+        }
+
+        function getTools() {
+            chrome.runtime.sendMessage({
+                type: 'GET_AVAILABLE_TOOLS'
+            }, response => {
+                console.log('Available tools:', response);
+                logResult(response);
+            });
+        }
+
+        function getMemory() {
+            chrome.runtime.sendMessage({
+                type: 'GET_MEMORY'
+            }, response => {
+                console.log('Memory exported:', response);
+                logResult(response);
+            });
+        }
+
+        // Test if extension is loaded
+        chrome.runtime.sendMessage({
+            type: 'GET_AVAILABLE_TOOLS'
+        }, response => {
+            if (response && !response.error) {
+                console.log('✅ CopilotX extension is loaded and working!');
+                document.getElementById('results').textContent = '✅ CopilotX extension is loaded and working!\n\nTry the buttons above to test functionality.';
+            } else {
+                console.log('❌ CopilotX extension not found or error:', response);
+                document.getElementById('results').textContent = '❌ CopilotX extension not found or error: ' + JSON.stringify(response, null, 2);
+            }
+        });
+    </script>
+</body>
+</html> 
